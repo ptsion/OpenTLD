@@ -30,7 +30,11 @@
 
 #include "TLDUtil.h"
 
+#include <highgui.h>
+#include <iostream>
+
 using namespace cv;
+using namespace std;
 
 namespace tld
 {
@@ -316,7 +320,9 @@ void DetectorCascade::detect(const Mat &img)
         if(!varianceFilter->filter(i))
         {
             detectionResult->posteriors[i] = 0;
-            continue;
+			//cout<<"wait for key"<<endl;
+            //waitKey( 0 );
+			continue;
         }
 
         if(!ensembleClassifier->filter(i))

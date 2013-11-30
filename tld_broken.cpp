@@ -99,15 +99,16 @@ int main(int argc, char **argv)
 	Mat img;
 	int frame_no = 0;
 	for ( int i = 0; i < 5; i++ ) {
-		capture >> img;
+		capture >> img; 
 		frame_no++;
 	}
 	_frame_cols = img.cols;
 	_frame_rows = img.rows;
-	double fx = (double)640 / img.cols;
+	double fx = 640 / img.cols;
 	double fy = fx;
+
 	resize(img, img, Size(), fx, fy);
-	
+
 	Mat grey(img.rows, img.cols, CV_8UC1);
     cvtColor(cv::Mat(img), grey, CV_BGR2GRAY);
 	
@@ -118,6 +119,7 @@ int main(int argc, char **argv)
 
 	//	step 2: initialize bounding box...
 	
+
 	namedWindow( window_name, 0 );
 	setMouseCallback( window_name, onMouse, 0 );
     
@@ -129,10 +131,12 @@ int main(int argc, char **argv)
 		double tic = cvGetTickCount();
 
 
-		if( selectObject && selection.width > 0 && selection.height > 0 ) {
-            		Mat roi(img, selection);
-            		bitwise_not(roi, roi);
-        	}
+
+		 if( selectObject && selection.width > 0 && selection.height > 0 )
+        {
+            Mat roi(img, selection);
+            bitwise_not(roi, roi);
+        }
 
 
 
@@ -154,7 +158,7 @@ int main(int argc, char **argv)
 
 			int confident = (tld_p->currConf >= _threshold) ? 1 : 0;
 
-			//if ( true ) //(showOutput || saveDir != NULL)
+			if ( true ) //(showOutput || saveDir != NULL)
 			{
 				char string[128];
 
@@ -165,7 +169,7 @@ int main(int argc, char **argv)
 					strcpy(learningString, "I AM Learning");
 				}
 
-				//sprintf(string, "#%d,Posterior %.2f; fps: %.2f, #numwindows:%d, %s", imAcq->currentFrame - 1, tld->currConf, fps, tld->detectorCascade->numWindows, learningString);
+			
 				printf("#%d, Posterior %.2f; #numwindows: %d, %s ", frame_no-1, tld_p->currConf, tld_p->detectorCascade->numWindows, learningString);
 				CvScalar yellow = CV_RGB(255, 255, 0);
 				CvScalar blue = CV_RGB(0, 0, 255);
@@ -193,17 +197,49 @@ int main(int argc, char **argv)
 		double toc = (cvGetTickCount() - tic) / cvGetTickFrequency();
 		toc = toc / 1000;	// toc in ms
 		float fps = 1000 / toc;
-		printf( "fps: %5.3f\n", fps );
+		//printf( "fps: %5.3f\n", fps );
 		imshow( window_name, img );
 
-		char c = (char)waitKey(MAX(5, (33-toc)));
-		if( c == 27 ) {
-			break;
+		char c = waitKey( MAX(5,(50-toc)) );
+        if( c == 27 )
+		{
+            break;
 		}
+		//waitKey( MAX(5,(30-toc)) );
 		capture >> img;
-		resize(img, img, Size(), fx, fy);
-
+		if ( !img.empty() ) {
+			resize(img, img, Size(), fx, fy);
+		}
 	}
+	/*
+
+
+	//	step 3: begin TLD algorithm...
+	/*
+
+    Main *main = new Main();
+    Config config;
+    ImAcq *imAcq = imAcqAlloc();
+    Gui *gui = new Gui();
+
+    main->gui = gui;
+    main->imAcq = imAcq;
+
+    if(config.init(argc, argv) == PROGRAM_EXIT)
+    {
+        return EXIT_FAILURE;
+    }
+
+    config.configure(main);
+
+    srand(main->seed);
+
+    imAcqInit(imAcq);
+
+    main->doWork();
+
+    delete main;
+	*/
 	
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

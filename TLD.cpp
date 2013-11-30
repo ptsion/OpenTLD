@@ -30,8 +30,6 @@
 #include "NNClassifier.h"
 #include "TLDUtil.h"
 
-#include <highgui.h>
-
 using namespace std;
 using namespace cv;
 
@@ -52,9 +50,6 @@ TLD::TLD()
     detectorCascade = new DetectorCascade();
     nnClassifier = detectorCascade->nnClassifier;
     medianFlowTracker = new MedianFlowTracker();
-
-	overlap_pth = 0.6;
-	overlap_nth = 0.2;
 }
 
 TLD::~TLD()
@@ -197,8 +192,7 @@ void TLD::initialLearning()
     NormalizedPatch patch;
     tldExtractNormalizedPatchRect(currImg, currBB, patch.values);
     patch.positive = 1;
-	
-	//TODO
+
     float initVar = tldCalcVariance(patch.values, TLD_PATCH_SIZE * TLD_PATCH_SIZE);
     detectorCascade->varianceFilter->minVar = initVar / 4;
 
@@ -216,12 +210,12 @@ void TLD::initialLearning()
     for(int i = 0; i < detectorCascade->numWindows; i++)
     {
 
-        if(overlap[i] > overlap_pth)	// 0.6 by author
+        if(overlap[i] > 0.6)
         {
             positiveIndices.push_back(pair<int, float>(i, overlap[i]));
         }
 
-        if(overlap[i] < overlap_nth)	// 0.2 by author
+        if(overlap[i] < 0.2)
         {
             float variance = detectionResult->variances[i];
 
@@ -231,15 +225,7 @@ void TLD::initialLearning()
             }
         }
     }
-	/*	
-	if ( positiveIndices.size() < 10 ) {
-		cout << "...positive size: " << positiveIndices.size() << "\n";
-	}
-	
-	if ( negativeIndices.size() < 10 ) {
-		cout << "...negative size: " << negativeIndices.size() << "\n";
-	}
-	*/
+
     sort(positiveIndices.begin(), positiveIndices.end(), tldSortByOverlapDesc);
 
     vector<NormalizedPatch> patches;
@@ -274,18 +260,15 @@ void TLD::initialLearning()
     detectorCascade->nnClassifier->learn(patches);
 
     delete[] overlap;
-	
-	/*cout << "###### initialization done ######\n";
-	cout << "positive indices size: " << positiveIndices.size() << "\n";
-	cout << "negative indices size: " << negativeIndices.size() << "\n";
-	cout << "#################################\n";
-	waitKey ( 0 );
-	*/
+
 }
 
 //Do this when current trajectory is valid
 void TLD::learn()
 {
+	static int lalala=0;
+	cout<<"TLD::learn : "<<lalala++<<endl;//no matter leaned or not, go  into this function
+
     if(!learningEnabled || !valid || !detectorEnabled)
     {
         learning = false;
@@ -319,12 +302,12 @@ void TLD::learn()
     for(int i = 0; i < detectorCascade->numWindows; i++)
     {
 
-        if(overlap[i] > overlap_pth)
+        if(overlap[i] > 0.6)
         {
             positiveIndices.push_back(pair<int, float>(i, overlap[i]));
         }
 
-        if(overlap[i] < overlap_nth)
+        if(overlap[i] < 0.2)
         {
             if(!detectorCascade->ensembleClassifier->enabled || detectionResult->posteriors[i] > 0.1)   //TODO: Shouldn't this read as 0.5?
             {
@@ -341,6 +324,10 @@ void TLD::learn()
 
     sort(positiveIndices.begin(), positiveIndices.end(), tldSortByOverlapDesc);
 
+	cout << "......positive size of ensemble classifier: " << positiveIndices.size() << "\n";
+	cout << "......negative size of ensemble classifier: " << negativeIndices.size() << "\n";
+	//cout << "......positive size of NN classifier: " << positiveIndicesForNN.size() << "\n";
+	cout << "......negative size of NN classifier: " << negativeIndicesForNN.size() << "\n";
     vector<NormalizedPatch> patches;
 
     patch.positive = 1;

@@ -64,9 +64,7 @@ public:
     void release();
     void selectObject(const cv::Mat &img, cv::Rect *bb);
     void processImage(const cv::Mat &img);
-private:
-	float overlap_pth;
-	float overlap_nth;  
+   
 };
 
 } /* namespace tld */

@@ -25,11 +25,13 @@
  */
 
 #include "VarianceFilter.h"
+#include <iostream>
 
 #include "IntegralImage.h"
 #include "DetectorCascade.h"
 
 using namespace cv;
+using namespace std;
 
 namespace tld
 {
@@ -89,10 +91,11 @@ bool VarianceFilter::filter(int i)
     float bboxvar = calcVariance(windowOffsets + TLD_WINDOW_OFFSET_SIZE * i);
 
     detectionResult->variances[i] = bboxvar;
-
+	
     if(bboxvar < minVar)
     {
-        return false;
+       // cout<<"......minVar=: "<<minVar<<endl;
+		return false;
     }
 
     return true;

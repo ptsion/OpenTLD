@@ -36,8 +36,8 @@ namespace tld
 
 NNClassifier::NNClassifier()
 {
-    thetaFP = .5;	// 0.5 by author
-    thetaTP = .65;	// 0.65 by author
+    thetaFP = .5;
+    thetaTP = .75;
 
     truePositives = new vector<NormalizedPatch>();
     falsePositives = new vector<NormalizedPatch>();
@@ -121,6 +121,8 @@ float NNClassifier::classifyPatch(NormalizedPatch *patch)
     float dP = 1 - ccorr_max_p;
 
     float distance = dN / (dN + dP);
+	//cout << "...distance to negative: " << dN << "\n";
+	//cout << "...distance to positive: " << dP << "\n";
     return distance;
 }
 
@@ -150,16 +152,18 @@ bool NNClassifier::filter(const Mat &img, int windowIdx)
     float conf = classifyWindow(img, windowIdx);
 
     if(conf < thetaTP)
-	//if ( conf < 0.5 ) 
-	{
-        	return false;
-    	}
+    {
+        return false;
+    }
 
     return true;
 }
 
 void NNClassifier::learn(vector<NormalizedPatch> patches)
 {
+
+	static int lalala=0;
+	cout<<"NN Classifier ::learn : "<<patches.size()<<endl;
     //TODO: Randomization might be a good idea here
     for(size_t i = 0; i < patches.size(); i++)
     {
@@ -178,6 +182,8 @@ void NNClassifier::learn(vector<NormalizedPatch> patches)
             falsePositives->push_back(patch);
         }
     }
+	cout << "...true positive size: " << truePositives->size() << "\n";
+	cout << "...false positive size: " << falsePositives->size() << "\n";
 
 }
 

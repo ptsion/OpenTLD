@@ -236,6 +236,8 @@ void EnsembleClassifier::updatePosteriors(int *featureVector, int positive, int 
 
 void EnsembleClassifier::learn(int *boundary, int positive, int *featureVector)
 {
+	//static int lalala=0;
+	//cout<<"Ens Classifier ::learn : "<<lalala++<<endl;
     if(!enabled) return;
 
     float conf = calcConfidence(featureVector);
