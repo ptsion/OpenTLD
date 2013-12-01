@@ -30,6 +30,8 @@
 #include "NNClassifier.h"
 #include "TLDUtil.h"
 
+#include <highgui.h>
+
 using namespace std;
 using namespace cv;
 
@@ -50,6 +52,11 @@ TLD::TLD()
     detectorCascade = new DetectorCascade();
     nnClassifier = detectorCascade->nnClassifier;
     medianFlowTracker = new MedianFlowTracker();
+
+	overlap_pth = 0.6;
+	overlap_nth = 0.2;
+	thetaFP_fuse = 0.5;
+	thetaTP_fuse = 0.65;
 }
 
 TLD::~TLD()
@@ -155,11 +162,11 @@ void TLD::fuseHypotheses()
             currBB = tldCopyRect(trackerBB);
             currConf = confTracker;
 
-            if(confTracker > nnClassifier->thetaTP)
+            if(confTracker > thetaTP_fuse)
             {
                 valid = true;
             }
-            else if(wasValid && confTracker > nnClassifier->thetaFP)
+            else if(wasValid && confTracker > thetaFP_fuse)
             {
                 valid = true;
             }
@@ -210,12 +217,12 @@ void TLD::initialLearning()
     for(int i = 0; i < detectorCascade->numWindows; i++)
     {
 
-        if(overlap[i] > 0.6)
+        if(overlap[i] > overlap_pth)
         {
             positiveIndices.push_back(pair<int, float>(i, overlap[i]));
         }
 
-        if(overlap[i] < 0.2)
+        if(overlap[i] < overlap_nth)
         {
             float variance = detectionResult->variances[i];
 
@@ -302,12 +309,12 @@ void TLD::learn()
     for(int i = 0; i < detectorCascade->numWindows; i++)
     {
 
-        if(overlap[i] > 0.6)
+        if(overlap[i] > overlap_pth)
         {
             positiveIndices.push_back(pair<int, float>(i, overlap[i]));
         }
 
-        if(overlap[i] < 0.2)
+        if(overlap[i] < overlap_nth)
         {
             if(!detectorCascade->ensembleClassifier->enabled || detectionResult->posteriors[i] > 0.1)   //TODO: Shouldn't this read as 0.5?
             {
@@ -326,7 +333,6 @@ void TLD::learn()
 
 	cout << "......positive size of ensemble classifier: " << positiveIndices.size() << "\n";
 	cout << "......negative size of ensemble classifier: " << negativeIndices.size() << "\n";
-	//cout << "......positive size of NN classifier: " << positiveIndicesForNN.size() << "\n";
 	cout << "......negative size of NN classifier: " << negativeIndicesForNN.size() << "\n";
     vector<NormalizedPatch> patches;
 
@@ -335,7 +341,7 @@ void TLD::learn()
     //TODO: Flip
 
 
-    int numIterations = std::min<size_t>(positiveIndices.size(), 10); //Take at most 10 bounding boxes (sorted by overlap)
+    int numIterations = std::min<size_t>(positiveIndices.size(), 3); //Take at most 10 bounding boxes (sorted by overlap)
 
     for(size_t i = 0; i < negativeIndices.size(); i++)
     {

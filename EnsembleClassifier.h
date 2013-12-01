@@ -74,6 +74,9 @@ public:
     void updatePosterior(int treeIdx, int idx, int positive, int amount);
     void learn(int *boundary, int positive, int *featureVector);
     bool filter(int i);
+private:
+	float thetaFP_learn;
+	float thetaTP_learn;
 };
 
 } /* namespace tld */

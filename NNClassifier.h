@@ -33,6 +33,10 @@
 #include "NormalizedPatch.h"
 #include "DetectionResult.h"
 
+#define REDLIGHT 0
+#define YELLOLIGHT 1
+#define GREENLIGHT 2
+
 namespace tld
 {
 
@@ -43,8 +47,8 @@ public:
     bool enabled;
 
     int *windows;
-    float thetaFP;
-    float thetaTP;
+	float thetaFP_learn;
+	float thetaTP_learn;
     DetectionResult *detectionResult;
     std::vector<NormalizedPatch>* falsePositives;
     std::vector<NormalizedPatch>* truePositives;
@@ -58,6 +62,14 @@ public:
     float classifyWindow(const cv::Mat &img, int windowIdx);
     void learn(std::vector<NormalizedPatch> patches);
     bool filter(const cv::Mat &img, int windowIdx);
+	void deletePositives(std::vector<NormalizedPatch>* obj, std::vector<NormalizedPatch>* cmp, int pos); 
+
+	int sample_status;
+
+private:
+	int maxTP;
+	int maxFP;
+	std::vector<std::vector <float>*>* corr_table;
 };
 
 } /* namespace tld */

@@ -36,11 +36,16 @@ namespace tld
 
 NNClassifier::NNClassifier()
 {
-    thetaFP = .5;
-    thetaTP = .75;
+	thetaFP_learn = 0.5;
+	thetaTP_learn = 0.65;
 
     truePositives = new vector<NormalizedPatch>();
     falsePositives = new vector<NormalizedPatch>();
+
+	maxTP = 120;
+	maxFP = 240;
+
+	sample_status = REDLIGHT;
 
 }
 
@@ -151,7 +156,8 @@ bool NNClassifier::filter(const Mat &img, int windowIdx)
 
     float conf = classifyWindow(img, windowIdx);
 
-    if(conf < thetaTP)
+    if(conf < thetaTP_learn)
+	//if ( conf < 0.5 )
     {
         return false;
     }
@@ -159,11 +165,33 @@ bool NNClassifier::filter(const Mat &img, int windowIdx)
     return true;
 }
 
+void NNClassifier::deletePositives(vector<NormalizedPatch>* obj, vector<NormalizedPatch>* cmp, int pos) {
+	if ( pos == 0 ) {
+		cout << "...deleting false positives...\n";
+	}
+	float minDist = 1;
+	vector<NormalizedPatch>::iterator victim;
+	int i = 0;
+	for ( vector<NormalizedPatch>::iterator it_obj = obj->begin(); it_obj != obj->end(); it_obj++ ) {
+		if ( i >= pos ) {
+			NormalizedPatch patch_obj = (*it_obj);
+			for (vector<NormalizedPatch>::iterator it_cmp = cmp->begin(); it_cmp != cmp->end(); it_cmp++ ) {
+				NormalizedPatch patch_cmp = (*it_cmp);
+				float corr = ncc(patch_obj.values, patch_cmp.values);
+				if ( 1-corr < minDist ) {
+					minDist = 1-corr;
+					victim = it_obj;
+				}
+			}
+		}
+		i++;
+	}
+	obj->erase(victim);
+}
+
 void NNClassifier::learn(vector<NormalizedPatch> patches)
 {
-
-	static int lalala=0;
-	cout<<"NN Classifier ::learn : "<<patches.size()<<endl;
+	cout<<"...NN Classifier learning with " << patches.size() << " patches...\n";
     //TODO: Randomization might be a good idea here
     for(size_t i = 0; i < patches.size(); i++)
     {
@@ -172,19 +200,42 @@ void NNClassifier::learn(vector<NormalizedPatch> patches)
 
         float conf = classifyPatch(&patch);
 
-        if(patch.positive && conf <= thetaTP)
+        if(patch.positive && conf < thetaTP_learn)
         {
-            truePositives->push_back(patch);
+            if ( truePositives->size() < maxTP ) {
+				truePositives->push_back(patch);
+			}
         }
 
-        if(!patch.positive && conf >= thetaFP)
-        {
-            falsePositives->push_back(patch);
+        if(!patch.positive && conf > thetaFP_learn)
+        {	
+			if ( falsePositives->size() < maxFP ) {
+				falsePositives->push_back(patch);
+			}
+			
+			if ( falsePositives->size() > maxFP ) {
+				deletePositives( falsePositives, truePositives, 0 );
+				sample_status = GREENLIGHT;
+			}
+			
+			
+			if ( falsePositives->size() > maxFP ) {
+				falsePositives->erase(falsePositives->begin());
+				sample_status = GREENLIGHT;
+			}
+			
         }
     }
+	
+	if ( truePositives->size() > maxTP ) {
+		deletePositives( truePositives, falsePositives, maxTP/3 );
+		sample_status = GREENLIGHT;
+	}
+	
+	
+
 	cout << "...true positive size: " << truePositives->size() << "\n";
 	cout << "...false positive size: " << falsePositives->size() << "\n";
-
 }
 
 

@@ -38,23 +38,29 @@ bool selectObject;
 Point origin;
 Rect selection;
 
+int write_result = 1;
+
 int trackObject = 0;
 //bool initialBB = true;
 
 int _frame_cols;
 int _frame_rows;
 
+bool capture_flag=true;
+
 const int showForeground = 1;
 const float _threshold = 0.5;
 
-#define VIDEOSOURCE 0
+//#define VIDEOSOURCE 0
+#define FROMCAM 0
+#define FROMAVI 1
+const int VIDEOSOURCE = FROMAVI;
+#define SOURCE "video5"
 #define PROGRAM_EXIT -1
 #define SUCCESS 0
-
+#define IMAGE_WIDTH 640
 
 TLD * tld_p;
-
-
 
 static void onMouse( int event, int x, int y, int, void* )
 {
@@ -88,30 +94,60 @@ static void onMouse( int event, int x, int y, int, void* )
 int main(int argc, char **argv)
 {
 	//	step 1: initialize image acquisition...
-	VideoCapture capture = VideoCapture( VIDEOSOURCE );
+	
+	VideoCapture capture;
+	char videosource[1024];
+	if ( VIDEOSOURCE == FROMCAM ) {
+		capture = VideoCapture( 0 );
+	} else {
+		sprintf(videosource, "%s.avi", SOURCE);
+		capture = VideoCapture( videosource );
+	}
+
 	if ( !capture.isOpened() ) {
 		cout << "Video capture failed!\n";
 		return PROGRAM_EXIT;
 	} else {
 		cout <<"Video capture successed"<<endl;
 	}
-	
-	Mat img;
+
+	Mat src, img;
 	int frame_no = 0;
 	for ( int i = 0; i < 5; i++ ) {
-		capture >> img; 
+		capture >> src; 
 		frame_no++;
 	}
-	_frame_cols = img.cols;
-	_frame_rows = img.rows;
-	double fx = 640 / img.cols;
+	_frame_cols = src.cols;
+	_frame_rows = src.rows;
+	double fx = (double)IMAGE_WIDTH / src.cols;
 	double fy = fx;
-
+	src.copyTo(img);
 	resize(img, img, Size(), fx, fy);
 
+	char outputname[1024];
+	int ex;
+	if ( VIDEOSOURCE == FROMAVI ) {
+		sprintf(outputname, "%s_result.avi", SOURCE);
+		ex = static_cast<int>(capture.get(CV_CAP_PROP_FOURCC));
+		capture_flag = 0;
+	} else {
+		cout << "output filename: ";
+		cin >> outputname;
+		VideoCapture sample = VideoCapture("01_david.avi");
+		ex = static_cast<int>(sample.get(CV_CAP_PROP_FOURCC));
+		capture_flag = 1;
+	}
+	double fps = 15;
+
+	VideoWriter outputVideo = VideoWriter(outputname, ex, fps, Size(img.cols,img.rows), true);
+	if ( !outputVideo.isOpened() ) {
+		cout << "Video Write failed!\n";
+		return PROGRAM_EXIT;
+	}
+	
 	Mat grey(img.rows, img.cols, CV_8UC1);
     cvtColor(cv::Mat(img), grey, CV_BGR2GRAY);
-	
+	capture_flag = false;
 	tld_p = new TLD;
 	tld_p->detectorCascade->imgWidth = grey.cols;
     tld_p->detectorCascade->imgHeight = grey.rows;
@@ -124,22 +160,15 @@ int main(int argc, char **argv)
 	setMouseCallback( window_name, onMouse, 0 );
     
 	Rect bb;
-	//bool skipProcessingOnce = false;
-    //bool reuseFrameOnce = false;
 	while ( !img.empty() ) {
-
+		int holdon = 0;
 		double tic = cvGetTickCount();
-
-
 
 		 if( selectObject && selection.width > 0 && selection.height > 0 )
         {
             Mat roi(img, selection);
             bitwise_not(roi, roi);
         }
-
-
-
 
 		if ( trackObject ) {
 			if ( trackObject == -1 ) {
@@ -148,9 +177,8 @@ int main(int argc, char **argv)
 				printf( "Starting at %d %d %d %d\n", bb.x, bb.y, bb.width, bb.height);
 			
 				tld_p->selectObject(grey, &bb);
-				//skipProcessingOnce = true;
-				//reuseFrameOnce = true;
-
+				holdon = 3;
+				capture_flag=true;
 			}
 		
 			//TODO
@@ -158,7 +186,6 @@ int main(int argc, char **argv)
 
 			int confident = (tld_p->currConf >= _threshold) ? 1 : 0;
 
-			if ( true ) //(showOutput || saveDir != NULL)
 			{
 				char string[128];
 
@@ -171,6 +198,8 @@ int main(int argc, char **argv)
 
 			
 				printf("#%d, Posterior %.2f; #numwindows: %d, %s ", frame_no-1, tld_p->currConf, tld_p->detectorCascade->numWindows, learningString);
+				CvScalar red = CV_RGB(255, 0, 0);
+				CvScalar green = CV_RGB(0, 255, 0);
 				CvScalar yellow = CV_RGB(255, 255, 0);
 				CvScalar blue = CV_RGB(0, 0, 255);
 				CvScalar black = CV_RGB(0, 0, 0);
@@ -182,6 +211,16 @@ int main(int argc, char **argv)
 					rectangle(img, *tld_p->currBB, rectangleColor, 3, 8, 0);
 				}
 
+				switch ( tld_p->detectorCascade->nnClassifier->sample_status ) {
+				case REDLIGHT:
+					circle(img, Point(10, 10), 5, Scalar(red), -1);
+					break;
+				case GREENLIGHT:
+					circle(img, Point(10, 10), 5, Scalar(green), -1);
+					break;
+				default: 
+					break;
+				}
 				if(showForeground)
 				{
 
@@ -197,49 +236,37 @@ int main(int argc, char **argv)
 		double toc = (cvGetTickCount() - tic) / cvGetTickFrequency();
 		toc = toc / 1000;	// toc in ms
 		float fps = 1000 / toc;
-		//printf( "fps: %5.3f\n", fps );
+		printf( "fps: %5.3f\n", fps );
 		imshow( window_name, img );
+		if ( write_result ) {
+			outputVideo.write(img);
+		}
 
-		char c = waitKey( MAX(5,(50-toc)) );
+		char c = waitKey( MAX(5,(30-toc)) );
         if( c == 27 )
 		{
             break;
 		}
-		//waitKey( MAX(5,(30-toc)) );
-		capture >> img;
-		if ( !img.empty() ) {
-			resize(img, img, Size(), fx, fy);
+		if ( c=='p')
+		{
+			capture_flag=false;
 		}
+		if ( c=='r')
+		{
+			capture_flag=true;
+		}
+
+		if ( capture_flag && !holdon ) {
+			capture >> src;
+			src.copyTo(img);
+			if ( !img.empty() ) {
+				resize(img, img, Size(), fx, fy);
+			}
+		} else if ( capture_flag && holdon ) {
+			holdon--;
+		}
+		
 	}
-	/*
 
-
-	//	step 3: begin TLD algorithm...
-	/*
-
-    Main *main = new Main();
-    Config config;
-    ImAcq *imAcq = imAcqAlloc();
-    Gui *gui = new Gui();
-
-    main->gui = gui;
-    main->imAcq = imAcq;
-
-    if(config.init(argc, argv) == PROGRAM_EXIT)
-    {
-        return EXIT_FAILURE;
-    }
-
-    config.configure(main);
-
-    srand(main->seed);
-
-    imAcqInit(imAcq);
-
-    main->doWork();
-
-    delete main;
-	*/
-	
     return EXIT_SUCCESS;
 }

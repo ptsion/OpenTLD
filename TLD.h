@@ -65,6 +65,11 @@ public:
     void selectObject(const cv::Mat &img, cv::Rect *bb);
     void processImage(const cv::Mat &img);
    
+private:
+	float overlap_pth;
+	float overlap_nth;
+	float thetaFP_fuse;
+	float thetaTP_fuse;
 };
 
 } /* namespace tld */

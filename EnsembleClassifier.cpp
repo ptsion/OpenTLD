@@ -52,6 +52,9 @@ EnsembleClassifier::EnsembleClassifier() :
     numTrees = 10;
     numFeatures = 13;
     enabled = true;
+
+	thetaFP_learn = 0.6;
+	thetaTP_learn = 0.4;
 }
 
 EnsembleClassifier::~EnsembleClassifier()
@@ -218,8 +221,7 @@ void EnsembleClassifier::updatePosterior(int treeIdx, int idx, int positive, int
 {
     int arrayIndex = treeIdx * numIndices + idx;
     (positive) ? positives[arrayIndex] += amount : negatives[arrayIndex] += amount;
-    //posteriors[arrayIndex] = ((float) positives[arrayIndex]) / (positives[arrayIndex] + negatives[arrayIndex]) / 10.0;
-	posteriors[arrayIndex] = ((float) positives[arrayIndex]) / (positives[arrayIndex] + negatives[arrayIndex]);
+	posteriors[arrayIndex] = ((float) positives[arrayIndex]) / (positives[arrayIndex] + negatives[arrayIndex])/10;
 }
 
 void EnsembleClassifier::updatePosteriors(int *featureVector, int positive, int amount)
@@ -236,14 +238,12 @@ void EnsembleClassifier::updatePosteriors(int *featureVector, int positive, int 
 
 void EnsembleClassifier::learn(int *boundary, int positive, int *featureVector)
 {
-	//static int lalala=0;
-	//cout<<"Ens Classifier ::learn : "<<lalala++<<endl;
     if(!enabled) return;
 
     float conf = calcConfidence(featureVector);
 
     //Update if positive patch and confidence < 0.5 or negative and conf > 0.5
-    if((positive && conf < 0.5) || (!positive && conf > 0.5))
+    if((positive && conf < thetaTP_learn) || (!positive && conf > thetaFP_learn))
     {
         updatePosteriors(featureVector, positive, 1);
     }
