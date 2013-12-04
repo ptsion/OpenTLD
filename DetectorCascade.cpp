@@ -40,7 +40,11 @@ namespace tld
 {
 
 //TODO: Convert this to a function
-#define sub2idx(x,y,imgWidthStep) ((int) (floor((x)+0.5) + floor((y)+0.5)*(imgWidthStep)))
+//#define sub2idx(x,y,imgWidthStep) ((int) (floor((x)+0.5) + floor((y)+0.5)*(imgWidthStep)))
+static int sub2idx(float x, float y, int imgWidthStep) {
+	int idx = (int)(floor((x)+0.5) + floor((y)+0.5)*(imgWidthStep));
+	return idx;
+}
 
 DetectorCascade::DetectorCascade()
 {
@@ -317,23 +321,18 @@ void DetectorCascade::detect(const Mat &img)
             }
         }
 
-        if(!varianceFilter->filter(i))
-        {
-            detectionResult->posteriors[i] = 0;
-			//cout<<"wait for key"<<endl;
-            //waitKey( 0 );
-			continue;
+        if(!varianceFilter->filter(i)) {
+		detectionResult->posteriors[i] = 0;
+		continue;
         }
 
-        if(!ensembleClassifier->filter(i))
-        {
-            continue;
-        }
+        if(!ensembleClassifier->filter(i)) {
+		continue;
+	}
 
-        if(!nnClassifier->filter(img, i))
-        {
-            continue;
-        }
+        if(!nnClassifier->filter(img, i)) {
+		continue;
+	}
 
         detectionResult->confidentIndices->push_back(i);
 

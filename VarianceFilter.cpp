@@ -92,11 +92,10 @@ bool VarianceFilter::filter(int i)
 
     detectionResult->variances[i] = bboxvar;
 	
-    if(bboxvar < minVar)
-    {
-       // cout<<"......minVar=: "<<minVar<<endl;
+	if(bboxvar < minVar) {
+		// cout<<"......minVar=: "<<minVar<<endl;
 		return false;
-    }
+	}
 
     return true;
 }

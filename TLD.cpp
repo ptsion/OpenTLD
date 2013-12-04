@@ -106,7 +106,7 @@ void TLD::selectObject(const Mat &img, Rect *bb)
 
 }
 
-void TLD::processImage(const Mat &img)
+void TLD::processImage(const Mat &img, bool showTrackResult)
 {
     storeCurrentData();
     Mat grey_frame;
@@ -115,7 +115,7 @@ void TLD::processImage(const Mat &img)
 
     if(trackerEnabled)
     {
-        medianFlowTracker->track(prevImg, currImg, prevBB);
+        medianFlowTracker->track(prevImg, currImg, prevBB, showTrackResult);
     }
 
     if(detectorEnabled && (!alternating || medianFlowTracker->trackerBB == NULL))

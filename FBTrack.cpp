@@ -33,6 +33,35 @@
 #include "Median.h"
 #include "Lk.h"
 
+#include <math.h>
+
+#include <cv.h>
+#include <highgui.h>
+
+using namespace cv;
+
+static void drawRectFromBB( IplImage *img, float * bb ) {
+	cvRectangle(
+		img, 
+		cvPoint(floor(bb[0]+0.5), floor(bb[1]+0.5)),
+		cvPoint(floor(bb[2]+0.5), floor(bb[3]+0.5)),
+		cvScalar(0, 0, 0, 0),
+		1, 8, 0
+	);
+}
+
+static void drawLinesCvPoint2D32f( IplImage * img, 
+	CvPoint2D32f * start, CvPoint2D32f * target, int num ) {
+	for ( int i = 0; i < num; i++ ) {
+		cvLine(
+			img,
+			cvPoint(floor(start[i].x+0.5), floor(start[i].y+0.5)),
+			cvPoint(floor(target[i].x+0.5), floor(target[i].y+0.5)),
+			cvScalar(0, 0, 0, 0),
+			1, 8, 0
+		);
+	}
+}
 /**
  * Calculate the bounding box of an Object in a following Image.
  * Imgs aren't changed.
@@ -42,8 +71,9 @@
  *                   Format x1,y1,x2,y2
  * @param scaleshift returns relative scale change of bb
  */
-int fbtrack(IplImage *imgI, IplImage *imgJ, float *bb, float *bbnew,
-            float *scaleshift)
+int fbtrack(IplImage *imgI, IplImage *imgJ, 
+	float *bb, float *bbnew, float *scaleshift,
+	bool showResult )
 {
     char level = 5;
     const int numM = 10;
@@ -112,8 +142,10 @@ int fbtrack(IplImage *imgI, IplImage *imgJ, float *bb, float *bbnew,
     //assert nRealPoints==nlkPoints
     medFb = getMedian(fbLkCleaned, nlkPoints);
     medNcc = getMedian(nccLkCleaned, nlkPoints);
-    /*  printf("medianfb: %f\nmedianncc: %f\n", medFb, medNcc);
-     printf("Number of points after lk: %d\n", nlkPoints);*/
+	if ( showResult ) {
+		printf("medianfb: %f\nmedianncc: %f\n", medFb, medNcc);
+		printf("Number of points after lk: %d\n", nlkPoints);
+	}
     nAfterFbUsage = 0;
 
     for(i = 0; i < nlkPoints; i++)
@@ -125,20 +157,27 @@ int fbtrack(IplImage *imgI, IplImage *imgJ, float *bb, float *bbnew,
             nAfterFbUsage++;
         }
     }
-
-    /*printf("Number of points after fb correction: %d\n", nAfterFbUsage);*/
-    //  showIplImage(IMGS[1]);
-    // show "OpticalFlow" fb filtered.
-    //  drawLinesCvPoint2D32f(imgI, startPoints, nRealPoints, targetPoints,
-    //      nRealPoints);
-    //  showIplImage(imgI);
+	
+	if ( showResult ) {
+		printf("Number of points after fb correction: %d\n", nAfterFbUsage);
+		//showIplImage(IMGS[1]);
+		// show "OpticalFlow" fb filtered.
+		drawLinesCvPoint2D32f(imgI, startPoints, targetPoints, nRealPoints);
+		
+		//showIplImage(imgI);
+		cvShowImage( "LK with FB Filtered", imgI );
+	}
 
     predictbb(bb, startPoints, targetPoints, nAfterFbUsage, bbnew, scaleshift);
-    /*printf("bbnew: %f,%f,%f,%f\n", bbnew[0], bbnew[1], bbnew[2], bbnew[3]);
-     printf("relative scale: %f \n", scaleshift[0]);*/
-    //show picture with tracked bb
-    //  drawRectFromBB(imgJ, bbnew);
-    //  showIplImage(imgJ);
+	
+	if ( showResult ) {
+		printf("bbnew: %f,%f,%f,%f\n", bbnew[0], bbnew[1], bbnew[2], bbnew[3]);
+		printf("relative scale: %f \n", scaleshift[0]);
+		// show picture with tracked bb
+		drawRectFromBB(imgJ, bbnew);
+		//showIplImage(imgJ);
+		cvShowImage( "Tracked BB", imgJ );
+	}
     free(startPoints);
     free(targetPoints);
     free(fbLkCleaned);

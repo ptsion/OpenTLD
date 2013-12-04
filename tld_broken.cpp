@@ -38,7 +38,7 @@ bool selectObject;
 Point origin;
 Rect selection;
 
-int write_result = 1;
+int write_result = 0;
 
 int trackObject = 0;
 //bool initialBB = true;
@@ -54,13 +54,14 @@ const float _threshold = 0.5;
 //#define VIDEOSOURCE 0
 #define FROMCAM 0
 #define FROMAVI 1
-const int VIDEOSOURCE = FROMAVI;
+const int VIDEOSOURCE = FROMCAM;
 #define SOURCE "video5"
 #define PROGRAM_EXIT -1
 #define SUCCESS 0
 #define IMAGE_WIDTH 640
 
 TLD * tld_p;
+bool showTrackResult = false;
 
 static void onMouse( int event, int x, int y, int, void* )
 {
@@ -130,7 +131,7 @@ int main(int argc, char **argv)
 		sprintf(outputname, "%s_result.avi", SOURCE);
 		ex = static_cast<int>(capture.get(CV_CAP_PROP_FOURCC));
 		capture_flag = 0;
-	} else {
+	} else if ( write_result ) {
 		cout << "output filename: ";
 		cin >> outputname;
 		VideoCapture sample = VideoCapture("01_david.avi");
@@ -139,19 +140,22 @@ int main(int argc, char **argv)
 	}
 	double fps = 15;
 
-	VideoWriter outputVideo = VideoWriter(outputname, ex, fps, Size(img.cols,img.rows), true);
-	if ( !outputVideo.isOpened() ) {
-		cout << "Video Write failed!\n";
-		return PROGRAM_EXIT;
+	VideoWriter outputVideo;
+	if ( write_result ) {
+		outputVideo = VideoWriter(outputname, ex, fps, Size(img.cols,img.rows), true);
+		if ( !outputVideo.isOpened() ) {
+			cout << "Video Write failed!\n";
+			return PROGRAM_EXIT;
+		}
 	}
 	
 	Mat grey(img.rows, img.cols, CV_8UC1);
-    cvtColor(cv::Mat(img), grey, CV_BGR2GRAY);
+	cvtColor(cv::Mat(img), grey, CV_BGR2GRAY);
 	capture_flag = false;
 	tld_p = new TLD;
 	tld_p->detectorCascade->imgWidth = grey.cols;
-    tld_p->detectorCascade->imgHeight = grey.rows;
-    tld_p->detectorCascade->imgWidthStep = grey.step;
+	tld_p->detectorCascade->imgHeight = grey.rows;
+	tld_p->detectorCascade->imgWidthStep = grey.step;
 
 	//	step 2: initialize bounding box...
 	
@@ -163,12 +167,11 @@ int main(int argc, char **argv)
 	while ( !img.empty() ) {
 		int holdon = 0;
 		double tic = cvGetTickCount();
-
-		 if( selectObject && selection.width > 0 && selection.height > 0 )
-        {
-            Mat roi(img, selection);
-            bitwise_not(roi, roi);
-        }
+		
+		if ( selectObject && selection.width > 0 && selection.height > 0 ) {
+			Mat roi(img, selection);
+			bitwise_not(roi, roi);
+		}
 
 		if ( trackObject ) {
 			if ( trackObject == -1 ) {
@@ -177,12 +180,12 @@ int main(int argc, char **argv)
 				printf( "Starting at %d %d %d %d\n", bb.x, bb.y, bb.width, bb.height);
 			
 				tld_p->selectObject(grey, &bb);
-				holdon = 3;
+				//holdon = 3;
 				capture_flag=true;
 			}
 		
 			//TODO
-			tld_p->processImage(img);
+			tld_p->processImage(img, showTrackResult);
 
 			int confident = (tld_p->currConf >= _threshold) ? 1 : 0;
 
@@ -236,26 +239,28 @@ int main(int argc, char **argv)
 		double toc = (cvGetTickCount() - tic) / cvGetTickFrequency();
 		toc = toc / 1000;	// toc in ms
 		float fps = 1000 / toc;
-		printf( "fps: %5.3f\n", fps );
+		printf( "fps: %5.3f\n", MAX(fps, 30) );
 		imshow( window_name, img );
 		if ( write_result ) {
 			outputVideo.write(img);
 		}
-
-		char c = waitKey( MAX(5,(30-toc)) );
-        if( c == 27 )
-		{
-            break;
+		
+		char c;
+		if ( showTrackResult ) {
+			c = waitKey( 0 );
+		} else {
+			c = waitKey( MAX(5,(33-toc)) );
 		}
-		if ( c=='p')
-		{
-			capture_flag=false;
+        	if( c == 27 ) {
+			break;
+		} else if ( c == 'p' ) {
+			capture_flag = !capture_flag;
+		} else if ( c == 't' ) {
+			showTrackResult = true;
+		} else {
+			showTrackResult = false;
 		}
-		if ( c=='r')
-		{
-			capture_flag=true;
-		}
-
+		
 		if ( capture_flag && !holdon ) {
 			capture >> src;
 			src.copyTo(img);

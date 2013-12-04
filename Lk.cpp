@@ -246,7 +246,7 @@ int trackLK(IplImage *imgI, IplImage *imgJ, float ptsI[], int nPtsI,
         }
         else //flow for the corresponding feature hasn't been found
         {
-            //Todo: shell realy write N_A_N in it?
+            //TODO: shell realy write N_A_N in it?
             ptsJ[2 * i] = N_A_N;
             ptsJ[2 * i + 1] = N_A_N;
             fb[i] = N_A_N;

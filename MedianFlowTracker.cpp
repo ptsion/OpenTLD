@@ -51,7 +51,7 @@ void MedianFlowTracker::cleanPreviousData()
     trackerBB = NULL;
 }
 
-void MedianFlowTracker::track(const Mat &prevMat, const Mat &currMat, Rect *prevBB)
+void MedianFlowTracker::track(const Mat &prevMat, const Mat &currMat, Rect *prevBB, bool showResult)
 {
     if(prevBB != NULL)
     {
@@ -66,7 +66,7 @@ void MedianFlowTracker::track(const Mat &prevMat, const Mat &currMat, Rect *prev
         IplImage prevImg = prevMat;
         IplImage currImg = currMat;
 
-        int success = fbtrack(&prevImg, &currImg, bb_tracker, bb_tracker, &scale);
+        int success = fbtrack(&prevImg, &currImg, bb_tracker, bb_tracker, &scale, showResult);
 
         //Extract subimage
         float x, y, w, h;

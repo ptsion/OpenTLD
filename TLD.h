@@ -63,7 +63,7 @@ public:
     virtual ~TLD();
     void release();
     void selectObject(const cv::Mat &img, cv::Rect *bb);
-    void processImage(const cv::Mat &img);
+    void processImage(const cv::Mat &img, bool showTrackResult = false);
    
 private:
 	float overlap_pth;

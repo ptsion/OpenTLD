@@ -40,7 +40,7 @@ public:
     MedianFlowTracker();
     virtual ~MedianFlowTracker();
     void cleanPreviousData();
-    void track(const cv::Mat &prevImg, const cv::Mat &currImg, cv::Rect *prevBB);
+    void track(const cv::Mat &prevImg, const cv::Mat &currImg, cv::Rect *prevBB, bool showResult = false);
 };
 
 } /* namespace tld */
