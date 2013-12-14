@@ -17,12 +17,7 @@
 *
 */
 
-/*
- * MedianFlowTracker.cpp
- *
- *  Created on: Nov 17, 2011
- *      Author: Georg Nebehay
- */
+#include <iostream>
 
 #include "MedianFlowTracker.h"
 
@@ -31,6 +26,7 @@
 #include "FBTrack.h"
 
 using namespace cv;
+using namespace std;
 
 namespace tld
 {
@@ -53,9 +49,11 @@ void MedianFlowTracker::cleanPreviousData()
 
 void MedianFlowTracker::track(const Mat &prevMat, const Mat &currMat, Rect *prevBB, bool showResult)
 {
-    if(prevBB != NULL)
-    {
-        if(prevBB->width <= 0 || prevBB->height <= 0)
+	if(prevBB != NULL) {	
+		
+	cout << "Median Flow Tracker Tracking...\n";
+
+	if(prevBB->width <= 0 || prevBB->height <= 0)
         {
             return;
         }
@@ -84,6 +82,8 @@ void MedianFlowTracker::track(const Mat &prevMat, const Mat &currMat, Rect *prev
         {
             trackerBB = new Rect(x, y, w, h);
         }
+	
+	cout << "Tracking Done!\n";
     }
 }
 

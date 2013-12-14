@@ -285,6 +285,8 @@ void DetectorCascade::detect(const Mat &img)
     {
         return;
     }
+	
+	cout << "Detector Cascade Detecting...\n";
 
     //Prepare components
     foregroundDetector->nextIteration(img); //Calculates foreground
@@ -292,15 +294,21 @@ void DetectorCascade::detect(const Mat &img)
     ensembleClassifier->nextIteration(img);
 
     #pragma omp parallel for
+	
+	cout << "Scanning " << numWindows << " windows...\n";
+	//waitKey( 0 );
 
-    for(int i = 0; i < numWindows; i++)
-    {
-
-        int *window = &windows[TLD_WINDOW_SIZE * i];
+	for(int i = 0; i < numWindows; i++)
+	{
+		//cout << "Window " << i << " out of " << numWindows << "...\n";
+        	
+		int *window = &windows[TLD_WINDOW_SIZE * i];
 
         if(foregroundDetector->isActive())
         {
-            bool isInside = false;
+		//cout << "Foreground Detector Filtering...\n";
+		
+		bool isInside = false;
 
             for(size_t j = 0; j < detectionResult->fgList->size(); j++)
             {
@@ -320,22 +328,27 @@ void DetectorCascade::detect(const Mat &img)
                 continue;
             }
         }
-
-        if(!varianceFilter->filter(i)) {
+	
+	//cout << "Variance Filter Filtering...\n";
+        if( !varianceFilter->filter(i) ) {
+		//cout << "Variance Filter says Negative!\n";
 		detectionResult->posteriors[i] = 0;
 		continue;
         }
-
-        if(!ensembleClassifier->filter(i)) {
+	
+	//cout << "Ensemble Classifier Filtering...\n";
+        if( !ensembleClassifier->filter(i)) {
+		//cout << "Ensemble Classifier says Negative!\n";
 		continue;
 	}
 
-        if(!nnClassifier->filter(img, i)) {
+	//cout << "NN Classifier Filtering...\n";
+        if( !nnClassifier->filter(img, i)) {
+		//cout << "NN Classifier says Negative!\n";
 		continue;
 	}
 
-        detectionResult->confidentIndices->push_back(i);
-
+	detectionResult->confidentIndices->push_back(i);
 
     }
 
@@ -343,6 +356,8 @@ void DetectorCascade::detect(const Mat &img)
     clustering->clusterConfidentIndices();
 
     detectionResult->containsValidData = true;
+	
+	//cout << "Detection Done!\n";
 }
 
 } /* namespace tld */

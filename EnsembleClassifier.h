@@ -31,6 +31,9 @@
 namespace tld
 {
 
+#define nt 10
+#define nf 13
+
 class EnsembleClassifier
 {
     const unsigned char *img;

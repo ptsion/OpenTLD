@@ -108,24 +108,23 @@ void TLD::selectObject(const Mat &img, Rect *bb)
 
 void TLD::processImage(const Mat &img, bool showTrackResult)
 {
-    storeCurrentData();
-    Mat grey_frame;
-    cvtColor(img, grey_frame, CV_RGB2GRAY);
-    currImg = grey_frame; // Store new image , right after storeCurrentData();
+	cout << "TLD Processing...\n";
+	storeCurrentData();
+	Mat grey_frame;
+	cvtColor(img, grey_frame, CV_RGB2GRAY);
+	currImg = grey_frame; // Store new image , right after storeCurrentData();
+	
+	if(trackerEnabled) {
+        	medianFlowTracker->track(prevImg, currImg, prevBB, showTrackResult);
+	}
 
-    if(trackerEnabled)
-    {
-        medianFlowTracker->track(prevImg, currImg, prevBB, showTrackResult);
-    }
-
-    if(detectorEnabled && (!alternating || medianFlowTracker->trackerBB == NULL))
-    {
-        detectorCascade->detect(grey_frame);
-    }
-
-    fuseHypotheses();
-
-    learn();
+	if(detectorEnabled && (!alternating || medianFlowTracker->trackerBB == NULL)) {
+        	detectorCascade->detect(grey_frame);
+	}
+	
+	fuseHypotheses();
+	
+	learn();
 
 }
 
@@ -189,7 +188,9 @@ void TLD::fuseHypotheses()
 
 void TLD::initialLearning()
 {
-    learning = true; //This is just for display purposes
+    	cout << "TLD Initial Learning...\n";
+	
+	learning = true; //This is just for display purposes
 
     DetectionResult *detectionResult = detectorCascade->detectionResult;
 
@@ -201,7 +202,7 @@ void TLD::initialLearning()
     patch.positive = 1;
 
     float initVar = tldCalcVariance(patch.values, TLD_PATCH_SIZE * TLD_PATCH_SIZE);
-    detectorCascade->varianceFilter->minVar = initVar / 4;
+    detectorCascade->varianceFilter->minVar = initVar / 2;
 
 
     float *overlap = new float[detectorCascade->numWindows];
@@ -273,8 +274,6 @@ void TLD::initialLearning()
 //Do this when current trajectory is valid
 void TLD::learn()
 {
-	static int lalala=0;
-	cout<<"TLD::learn : "<<lalala++<<endl;//no matter leaned or not, go  into this function
 
     if(!learningEnabled || !valid || !detectorEnabled)
     {

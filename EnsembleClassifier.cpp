@@ -16,17 +16,12 @@
 *   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
 *
 */
-/*
- * EnsembleClassifier.cpp
- *
- *  Created on: Nov 16, 2011
- *      Author: Georg Nebehay
- */
 
 #include "DetectorCascade.h"
 
 #include <cstdlib>
 #include <cmath>
+#include <assert.h>
 
 #include <opencv/cv.h>
 
@@ -49,8 +44,8 @@ EnsembleClassifier::EnsembleClassifier() :
     positives(NULL),
     negatives(NULL)
 {
-    numTrees = 10;
-    numFeatures = 13;
+    numTrees = nt;
+    numFeatures = nf;
     enabled = true;
 
 	thetaFP_learn = 0.6;
@@ -65,7 +60,9 @@ EnsembleClassifier::~EnsembleClassifier()
 
 void EnsembleClassifier::init()
 {
-    numIndices = pow(2.0f, numFeatures);
+	numTrees = nt;
+	numFeatures =  nf;
+	numIndices = pow(2.0f, numFeatures);
 
     initFeatureLocations();
     initFeatureOffsets();
@@ -91,7 +88,10 @@ void EnsembleClassifier::release()
  */
 void EnsembleClassifier::initFeatureLocations()
 {
-    int size = 2 * 2 * numFeatures * numTrees;
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
+	
+	int size = 2 * 2 * numFeatures * numTrees;
 
     features = new float[size];
 
@@ -110,6 +110,9 @@ void EnsembleClassifier::initFeatureOffsets()
 
     featureOffsets = new int[numScales * numTrees * numFeatures * 2];
     int *off = featureOffsets;
+	
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
 
     for(int k = 0; k < numScales; k++)
     {
@@ -130,9 +133,12 @@ void EnsembleClassifier::initFeatureOffsets()
 
 void EnsembleClassifier::initPosteriors()
 {
-    posteriors = new float[numTrees * numIndices];
-    positives = new int[numTrees * numIndices];
-    negatives = new int[numTrees * numIndices];
+    
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
+	posteriors = new float[numTrees * numIndices];
+    	positives = new int[numTrees * numIndices];
+   	negatives = new int[numTrees * numIndices];
 
     for(int i = 0; i < numTrees; i++)
     {
@@ -160,6 +166,8 @@ int EnsembleClassifier::calcFernFeature(int windowIdx, int treeIdx)
     int *bbox = windowOffsets + windowIdx * TLD_WINDOW_OFFSET_SIZE;
     int *off = featureOffsets + bbox[4] + treeIdx * 2 * numFeatures; //bbox[4] is pointer to features for the current scale
 
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
     for(int i = 0; i < numFeatures; i++)
     {
         index <<= 1;
@@ -180,37 +188,61 @@ int EnsembleClassifier::calcFernFeature(int windowIdx, int treeIdx)
 
 void EnsembleClassifier::calcFeatureVector(int windowIdx, int *featureVector)
 {
-    for(int i = 0; i < numTrees; i++)
-    {
-        featureVector[i] = calcFernFeature(windowIdx, i);
-    }
+	//cout << "......calcFernFeature...\n";
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
+	for(int i = 0; i < numTrees; i++) {
+        	featureVector[i] = calcFernFeature(windowIdx, i);
+	}
 }
 
 float EnsembleClassifier::calcConfidence(int *featureVector)
 {
-    float conf = 0.0;
-
-    for(int i = 0; i < numTrees; i++)
-    {
-        conf += posteriors[i * numIndices + featureVector[i]];
-    }
-
-    return conf;
+	float conf = 0.0;
+	/*
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
+	for(int i = 0; i < numTrees; i++) {
+		cout << "......adding tree " << i << "'s result, ";
+		conf += posteriors[i * numIndices + featureVector[i]];
+		cout << "conf = " << conf << "...\n";
+	}
+	*/
+	return conf;
 }
 
 void EnsembleClassifier::classifyWindow(int windowIdx)
 {
-    int *featureVector = detectionResult->featureVectors + numTrees * windowIdx;
-    calcFeatureVector(windowIdx, featureVector);
+	assert (numTrees == nt);
+	assert (numFeatures == nf);
+	int *featureVector = detectionResult->featureVectors + numTrees * windowIdx;
+    	//cout << "...calcFeatureVector...\n";
+	calcFeatureVector(windowIdx, featureVector);
+	
+	//cout << "...calcConfidence...\n";
+	//detectionResult->posteriors[windowIdx] = calcConfidence(featureVector);
+	
+	float conf = 0.0;
 
-    detectionResult->posteriors[windowIdx] = calcConfidence(featureVector);
+	for(int i = 0; i < numTrees; i++) {
+		//cout << "......adding tree " << i << "'s result, ";
+		conf += posteriors[i * numIndices + featureVector[i]];
+		//cout << "conf = " << conf << "...\n";
+	}
+	
+	//cout << "......updating posteriors...\n";
+	detectionResult->posteriors[windowIdx] = conf;
+	//cout << "......update done!\n";
+
+	return;
 }
 
 bool EnsembleClassifier::filter(int i)
 {
     if(!enabled) return true;
 
-    classifyWindow(i);
+	classifyWindow(i);
+	//cout << "...Ensemble Classifier done!\n";
 
     if(detectionResult->posteriors[i] < 0.5) return false;
 
@@ -221,7 +253,7 @@ void EnsembleClassifier::updatePosterior(int treeIdx, int idx, int positive, int
 {
     int arrayIndex = treeIdx * numIndices + idx;
     (positive) ? positives[arrayIndex] += amount : negatives[arrayIndex] += amount;
-	posteriors[arrayIndex] = ((float) positives[arrayIndex]) / (positives[arrayIndex] + negatives[arrayIndex])/*/10*/;
+	posteriors[arrayIndex] = ((float) positives[arrayIndex]) / (positives[arrayIndex] + negatives[arrayIndex]);
 }
 
 void EnsembleClassifier::updatePosteriors(int *featureVector, int positive, int amount)
