@@ -20,7 +20,7 @@ add_executable( OpenTLD
 	Median.cpp
 	MedianFlowTracker.cpp
 	NNClassifier.cpp
-	tld_broken.cpp
+	TLD_run.cpp
 	TLD.cpp
 	TLDUtil.cpp
 	Trajectory.cpp
