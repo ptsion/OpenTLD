@@ -1,26 +1,19 @@
-/*  Copyright 2011 AIT Austrian Institute of Technology
-*
-*   This file is part of OpenTLD.
-*
-*   OpenTLD is free software: you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*   (at your option) any later version.
-*
-*   OpenTLD is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/
 /*
- * EnsembleClassifier.h
+ *   This file is part of OpenTLD.
  *
- *  Created on: Nov 16, 2011
- *      Author: Georg Nebehay
+ *   OpenTLD is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   OpenTLD is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef ENSEMBLECLASSIFIER_H_
@@ -31,17 +24,15 @@
 namespace tld
 {
 
-#define nt 10
+#define nt 10	// Some strange bugs happen on my Mac, have to do it this way...
 #define nf 13
 
-class EnsembleClassifier
-{
+class EnsembleClassifier {
     const unsigned char *img;
 
-    float calcConfidence(int *featureVector);
     int calcFernFeature(int windowIdx, int treeIdx);
     void calcFeatureVector(int windowIdx, int *featureVector);
-    void updatePosteriors(int *featureVector, int positive, int amount);
+    //void updatePosteriors(int *featureVector, int positive, int amount);
 public:
     bool enabled;
 
@@ -74,12 +65,12 @@ public:
     void release();
     void nextIteration(const cv::Mat &img);
     void classifyWindow(int windowIdx);
-    void updatePosterior(int treeIdx, int idx, int positive, int amount);
+    //void updatePosterior(int treeIdx, int idx, int positive, int amount);
     void learn(int *boundary, int positive, int *featureVector);
     bool filter(int i);
 private:
-	float thetaFP_learn;
-	float thetaTP_learn;
+    float thetaFP_learn;
+    float thetaTP_learn;
 };
 
 } /* namespace tld */
