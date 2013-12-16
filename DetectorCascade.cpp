@@ -1,27 +1,19 @@
-/*  Copyright 2011 AIT Austrian Institute of Technology
-*
-*   This file is part of OpenTLD.
-*
-*   OpenTLD is free software: you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*   (at your option) any later version.
-*
-*   OpenTLD is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/
-
 /*
- * DetectorCascade.cpp
+ *   This file is part of OpenTLD.
  *
- *  Created on: Nov 16, 2011
- *      Author: Georg Nebehay
+ *   OpenTLD is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   OpenTLD is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "DetectorCascade.h"
@@ -39,50 +31,46 @@ using namespace std;
 namespace tld
 {
 
-//TODO: Convert this to a function
-//#define sub2idx(x,y,imgWidthStep) ((int) (floor((x)+0.5) + floor((y)+0.5)*(imgWidthStep)))
 static int sub2idx(float x, float y, int imgWidthStep) {
 	int idx = (int)(floor((x)+0.5) + floor((y)+0.5)*(imgWidthStep));
 	return idx;
 }
 
-DetectorCascade::DetectorCascade()
-{
-    objWidth = -1; //MUST be set before calling init
-    objHeight = -1; //MUST be set before calling init
-    useShift = 1;
-    imgHeight = -1;
-    imgWidth = -1;
+DetectorCascade::DetectorCascade() {
+	objWidth = -1; //MUST be set before calling init
+	objHeight = -1; //MUST be set before calling init
+	useShift = 1;
+	imgHeight = -1;
+	imgWidth = -1;
 
-    shift = 0.1;
-    minScale = -10;
-    maxScale = 10;
-    minSize = 25;
-    imgWidthStep = -1;
+	shift = 0.1;
+	minScale = -10;
+	maxScale = 10;
+	minSize = 25;
+	imgWidthStep = -1;
 
-    numTrees = 13;
-    numFeatures = 10;
+	numTrees = 10;
+	numFeatures = 13;
 
-    initialised = false;
+	initialised = false;
 
-    foregroundDetector = new ForegroundDetector();
-    varianceFilter = new VarianceFilter();
-    ensembleClassifier = new EnsembleClassifier();
-    nnClassifier = new NNClassifier();
-    clustering = new Clustering();
+	foregroundDetector = new ForegroundDetector();
+	varianceFilter = new VarianceFilter();
+	ensembleClassifier = new EnsembleClassifier();
+	nnClassifier = new NNClassifier();
+	clustering = new Clustering();
 
-    detectionResult = new DetectionResult();
+	detectionResult = new DetectionResult();
 }
 
-DetectorCascade::~DetectorCascade()
-{
-    release();
+DetectorCascade::~DetectorCascade() {
+	release();
 
-    delete foregroundDetector;
-    delete varianceFilter;
-    delete ensembleClassifier;
-    delete nnClassifier;
-    delete detectionResult;
+	delete foregroundDetector;
+	delete varianceFilter;
+	delete ensembleClassifier;
+	delete nnClassifier;
+	delete detectionResult;
 }
 
 void DetectorCascade::init()
@@ -127,8 +115,7 @@ void DetectorCascade::propagateMembers()
     clustering->detectionResult = detectionResult;
 }
 
-void DetectorCascade::release()
-{
+void DetectorCascade::release() {
     if(!initialised)
     {
         return; //Do nothing
@@ -158,8 +145,7 @@ void DetectorCascade::release()
     detectionResult->release();
 }
 
-void DetectorCascade::cleanPreviousData()
-{
+void DetectorCascade::cleanPreviousData() {
     detectionResult->reset();
 }
 
@@ -168,8 +154,7 @@ void DetectorCascade::cleanPreviousData()
  * scales are stored using the format <w h>
  *
  */
-void DetectorCascade::initWindowsAndScales()
-{
+void DetectorCascade::initWindowsAndScales() {
 
     int scanAreaX = 1; // It is important to start with 1/1, because the integral images aren't defined at pos(-1,-1) due to speed reasons
     int scanAreaY = 1;
@@ -254,8 +239,7 @@ void DetectorCascade::initWindowsAndScales()
 //Creates offsets that can be added to bounding boxes
 //offsets are contained in the form delta11, delta12,... (combined index of dw and dh)
 //Order: scale->tree->feature
-void DetectorCascade::initWindowOffsets()
-{
+void DetectorCascade::initWindowOffsets() {
 
     windowOffsets = new int[TLD_WINDOW_OFFSET_SIZE * numWindows];
     int *off = windowOffsets;
@@ -275,89 +259,75 @@ void DetectorCascade::initWindowOffsets()
     }
 }
 
-void DetectorCascade::detect(const Mat &img)
-{
-    //For every bounding box, the output is confidence, pattern, variance
-
-    detectionResult->reset();
-
-    if(!initialised)
-    {
-        return;
-    }
+void DetectorCascade::detect(const Mat &img) {
+	//For every bounding box, the output is confidence, pattern, variance
+	
+	detectionResult->reset();
+	
+	if(!initialised) {
+		return;
+	}
 	
 	cout << "Detector Cascade Detecting...\n";
+	
+	//Prepare components
+	foregroundDetector->nextIteration(img); //Calculates foreground
+	varianceFilter->nextIteration(img); //Calculates integral images
+	ensembleClassifier->nextIteration(img);
 
-    //Prepare components
-    foregroundDetector->nextIteration(img); //Calculates foreground
-    varianceFilter->nextIteration(img); //Calculates integral images
-    ensembleClassifier->nextIteration(img);
-
-    #pragma omp parallel for
+	#pragma omp parallel for
 	
 	cout << "Scanning " << numWindows << " windows...\n";
 	//waitKey( 0 );
 
-	for(int i = 0; i < numWindows; i++)
-	{
+	for(int i = 0; i < numWindows; i++) {
 		//cout << "Window " << i << " out of " << numWindows << "...\n";
-        	
 		int *window = &windows[TLD_WINDOW_SIZE * i];
+		if(foregroundDetector->isActive()) {
+			//cout << "Foreground Detector Filtering...\n";
+			bool isInside = false;
+			for(size_t j = 0; j < detectionResult->fgList->size(); j++) {
+				int bgBox[4];
+				tldRectToArray(detectionResult->fgList->at(j), bgBox);
+				if(tldIsInside(window, bgBox)) {
+					isInside = true;
+				}
+			}
 
-        if(foregroundDetector->isActive())
-        {
-		//cout << "Foreground Detector Filtering...\n";
-		
-		bool isInside = false;
-
-            for(size_t j = 0; j < detectionResult->fgList->size(); j++)
-            {
-
-                int bgBox[4];
-                tldRectToArray(detectionResult->fgList->at(j), bgBox);
-
-                if(tldIsInside(window, bgBox))  //TODO: This is inefficient and should be replaced by a quadtree
-                {
-                    isInside = true;
-                }
-            }
-
-            if(!isInside)
-            {
-                detectionResult->posteriors[i] = 0;
-                continue;
-            }
-        }
+			if(!isInside) {
+				detectionResult->posteriors[i] = 0;
+				continue;
+			}
+		}
 	
-	//cout << "Variance Filter Filtering...\n";
-        if( !varianceFilter->filter(i) ) {
-		//cout << "Variance Filter says Negative!\n";
-		detectionResult->posteriors[i] = 0;
-		continue;
-        }
+		//cout << "Variance Filter Filtering...\n";
+		if( !varianceFilter->filter(i) ) {
+			//cout << "Variance Filter says Negative!\n";
+			detectionResult->posteriors[i] = 0;
+			continue;
+		}
 	
-	//cout << "Ensemble Classifier Filtering...\n";
-        if( !ensembleClassifier->filter(i)) {
-		//cout << "Ensemble Classifier says Negative!\n";
-		continue;
+		//cout << "Ensemble Classifier Filtering...\n";
+		if( !ensembleClassifier->filter(i)) {
+			//cout << "Ensemble Classifier says Negative!\n";
+			continue;
+		}
+
+		//cout << "NN Classifier Filtering...\n";
+		if( !nnClassifier->filter(img, i)) {
+			//cout << "NN Classifier says Negative!\n";
+			continue;
+		}
+
+		detectionResult->confidentIndices->push_back(i);
 	}
 
-	//cout << "NN Classifier Filtering...\n";
-        if( !nnClassifier->filter(img, i)) {
-		//cout << "NN Classifier says Negative!\n";
-		continue;
-	}
+	//Cluster
+	clustering->clusterConfidentIndices();
 
-	detectionResult->confidentIndices->push_back(i);
-
-    }
-
-    //Cluster
-    clustering->clusterConfidentIndices();
-
-    detectionResult->containsValidData = true;
+	detectionResult->containsValidData = true;
 	
-	//cout << "Detection Done!\n";
+	cout << "Detection Done!\n";
 }
 
 } /* namespace tld */
