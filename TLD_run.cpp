@@ -1,22 +1,26 @@
-/*  Copyright 2011 AIT Austrian Institute of Technology
-*
-*   This file is part of OpenTLD.
-*
-*   OpenTLD is free software: you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*   (at your option) any later version.
-*
-*   OpenTLD is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/
-
+/*
+ * This file is part of OpenTLD.
+ *
+ * OpenTLD is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenTLD is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+/*
+ * author:
+ * 	Xingtong Zhou
+ * 	University of Michigan
+ * 	Dec.2013
+ */
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
@@ -41,7 +45,7 @@ const float _threshold = 0.5;
 #define PROGRAM_EXIT -1
 #define SUCCESS 0
 
-const char * dir = "02_jumping";
+const char * dir = "01_david";
 const char * ext = "jpg";
 
 void getFrame( Mat &dst, int frame_no, int flags = 1 ) {
@@ -133,6 +137,7 @@ void writeResult(double overlap) {
 void closeResultFile() {
 	resultfile.close();
 }
+
 CvScalar red = CV_RGB(255, 0, 0);
 CvScalar green = CV_RGB(0, 255, 0);
 CvScalar yellow = CV_RGB(255, 255, 0);
@@ -147,8 +152,8 @@ bool showTrackResult = false;
 
 const int maxFrames = 600;
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+	
 	namedWindow( window_name, 0 );
 	
 	initGTFile();
@@ -177,52 +182,49 @@ int main(int argc, char **argv)
 	capture_flag = true;
 	
 	while ( !img.empty() && frame_no < maxFrames ) {
-		int holdon = 0;
+		//int holdon = 0;
 		double tic = cvGetTickCount();
 
-			tld_p->processImage(img, showTrackResult);
+		tld_p->processImage(img, showTrackResult);
 
-			int confident = (tld_p->currConf >= _threshold) ? 1 : 0;
+		int confident = (tld_p->currConf >= _threshold) ? 1 : 0;
 
-			{
-				char string[128];
+		char string[128];
+		char learningString[128] = "";
 
-				char learningString[10] = "";
-
-				if(tld_p->learning)
-				{
-					strcpy(learningString, "I AM Learning");
-				}
-
+		//if(tld_p->learning) {
+		//	strcpy(learningString, "I AM Learning");
+		//}
 			
-				printf("#%d, Posterior %.2f; #numwindows: %d, %s ", frame_no-1, tld_p->currConf, tld_p->detectorCascade->numWindows, learningString);
+		printf("#%d, Posterior %.2f; #numwindows: %d, %s ", frame_no-1, tld_p->currConf, tld_p->detectorCascade->numWindows, learningString);
 	
-				if (tld_p->currBB != NULL) {
-					Scalar rectangleColor = (confident) ? Scalar(blue) : Scalar(yellow);
-					rectangle(img, *(tld_p->currBB), rectangleColor, 3, 8, 0);
-					Rect bb = *(tld_p->currBB);
-					double overlap = overlapRatio(bb, gt);
-					writeResult(overlap);
-				}
+		if (tld_p->currBB != NULL) {
+			Scalar rectangleColor = (confident) ? Scalar(blue) : Scalar(yellow);
+			rectangle(img, *(tld_p->currBB), rectangleColor, 3, 8, 0);
+			Rect bb = *(tld_p->currBB);
+			double overlap = overlapRatio(bb, gt);
+			writeResult(overlap);
+		}
 
-				switch ( tld_p->detectorCascade->nnClassifier->sample_status ) {
-				case REDLIGHT:
-					circle(img, Point(10, 10), 5, Scalar(red), -1);
-					break;
-				case GREENLIGHT:
-					circle(img, Point(10, 10), 5, Scalar(green), -1);
-					break;
-				default: 
-					break;
-				}
-				if(showForeground) {
-					for(size_t i = 0; i < tld_p->detectorCascade->detectionResult->fgList->size(); i++)
-					{
-						Rect r = tld_p->detectorCascade->detectionResult->fgList->at(i);
-						rectangle(img, r, Scalar(white), 1, 8, 0);
-					}
-				}
+		switch ( tld_p->detectorCascade->nnClassifier->sample_status ) {
+		case REDLIGHT:
+			circle(img, Point(10, 10), 5, Scalar(red), -1);
+			break;
+		case GREENLIGHT:
+			circle(img, Point(10, 10), 5, Scalar(green), -1);
+			break;
+		default: 
+			break;
+		}
+			
+		/*
+		if(showForeground) {
+			for(size_t i = 0; i < tld_p->detectorCascade->detectionResult->fgList->size(); i++) {
+				Rect r = tld_p->detectorCascade->detectionResult->fgList->at(i);
+				rectangle(img, r, Scalar(white), 1, 8, 0);
 			}
+		}
+		*/
 
 		double toc = (cvGetTickCount() - tic) / cvGetTickFrequency();
 		toc = toc / 1000;	// toc in ms
@@ -250,8 +252,8 @@ int main(int argc, char **argv)
 			getFrame( img, frame_no);
 			gt = getGTBB();
 			frame_no++;
-		} else if ( capture_flag && holdon ) {
-			holdon--;
+		//} else if ( capture_flag && holdon ) {
+		//	holdon--;
 		}
 		
 	}
