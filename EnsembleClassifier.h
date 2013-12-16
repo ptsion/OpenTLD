@@ -32,7 +32,6 @@ class EnsembleClassifier {
 
     int calcFernFeature(int windowIdx, int treeIdx);
     void calcFeatureVector(int windowIdx, int *featureVector);
-    //void updatePosteriors(int *featureVector, int positive, int amount);
 public:
     bool enabled;
 
@@ -65,7 +64,6 @@ public:
     void release();
     void nextIteration(const cv::Mat &img);
     void classifyWindow(int windowIdx);
-    //void updatePosterior(int treeIdx, int idx, int positive, int amount);
     void learn(int *boundary, int positive, int *featureVector);
     bool filter(int i);
 private:
