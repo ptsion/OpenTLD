@@ -1,26 +1,19 @@
-/*  Copyright 2011 AIT Austrian Institute of Technology
-*
-*   This file is part of OpenTLD.
-*
-*   OpenTLD is free software: you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*   (at your option) any later version.
-*
-*   OpenTLD is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
-*
-*/
 /*
- * NNClassifier.cpp
+ *   This file is part of OpenTLD.
  *
- *  Created on: Nov 16, 2011
- *      Author: Georg Nebehay
+ *   OpenTLD is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   OpenTLD is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with OpenTLD.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "NNClassifier.h"
@@ -34,23 +27,21 @@ using namespace cv;
 namespace tld
 {
 
-NNClassifier::NNClassifier()
-{
+NNClassifier::NNClassifier() {
 	thetaFP_learn = 0.5;
 	thetaTP_learn = 0.65;
 
-    truePositives = new vector<NormalizedPatch>();
-    falsePositives = new vector<NormalizedPatch>();
+	truePositives = new vector<NormalizedPatch>();
+	falsePositives = new vector<NormalizedPatch>();
 
-	maxTP = 120;
-	maxFP = 240;
+	maxTP = 100; // not a critical choice
+	maxFP = 300;
 
 	sample_status = REDLIGHT;
 
 }
 
-NNClassifier::~NNClassifier()
-{
+NNClassifier::~NNClassifier() {
     release();
 
     delete truePositives;
@@ -126,8 +117,8 @@ float NNClassifier::classifyPatch(NormalizedPatch *patch)
     float dP = 1 - ccorr_max_p;
 
     float distance = dN / (dN + dP);
-	//cout << "...distance to negative: " << dN << "\n";
-	//cout << "...distance to positive: " << dP << "\n";
+    //cout << "...distance to negative: " << dN << "\n";
+    //cout << "...distance to positive: " << dP << "\n";
     return distance;
 }
 
@@ -156,9 +147,7 @@ bool NNClassifier::filter(const Mat &img, int windowIdx)
 
     float conf = classifyWindow(img, windowIdx);
 
-    if(conf < thetaTP_learn)
-	//if ( conf < 0.5 )
-    {
+    if(conf < thetaTP_learn) { // it seems 0.5 is ok
         return false;
     }
 
@@ -189,26 +178,20 @@ void NNClassifier::deletePositives(vector<NormalizedPatch>* obj, vector<Normaliz
 	obj->erase(victim);
 }
 
-void NNClassifier::learn(vector<NormalizedPatch> patches)
-{
+void NNClassifier::learn(vector<NormalizedPatch> patches) {
 	cout<<"...NN Classifier learning with " << patches.size() << " patches...\n";
-    //TODO: Randomization might be a good idea here
-    for(size_t i = 0; i < patches.size(); i++)
-    {
-
-        NormalizedPatch patch = patches[i];
-
-        float conf = classifyPatch(&patch);
-
-        if(patch.positive && conf < thetaTP_learn)
-        {
-            if ( truePositives->size() < maxTP ) {
+	//TODO: Randomization might be a good idea here
+	for(size_t i = 0; i < patches.size(); i++) {
+	
+		NormalizedPatch patch = patches[i];
+		float conf = classifyPatch(&patch);
+		if(patch.positive && conf < thetaTP_learn) {
+			if ( truePositives->size() < maxTP ) {
 				truePositives->push_back(patch);
 			}
-        }
+		}
 
-        if(!patch.positive && conf > thetaFP_learn)
-        {	
+		if(!patch.positive && conf > thetaFP_learn) {	
 			if ( falsePositives->size() < maxFP ) {
 				falsePositives->push_back(patch);
 			}
@@ -218,14 +201,12 @@ void NNClassifier::learn(vector<NormalizedPatch> patches)
 				sample_status = GREENLIGHT;
 			}
 			
-			
 			if ( falsePositives->size() > maxFP ) {
 				falsePositives->erase(falsePositives->begin());
 				sample_status = GREENLIGHT;
 			}
-			
-        }
-    }
+		}
+	}
 	
 	if ( truePositives->size() > maxTP ) {
 		deletePositives( truePositives, falsePositives, maxTP/3 );
